@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patronato Zacualpan</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
+        .container { max-width: 400px; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        input, button { width: 100%; padding: 10px; margin: 10px 0; }
+        canvas { max-width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container" id="login-container">
+        <h2>Inicio de Sesión</h2>
+        <input type="text" id="username" placeholder="Nombre de usuario">
+        <input type="password" id="password" placeholder="Contraseña">
+        <button onclick="login()">Ingresar</button>
+        <button onclick="recuperarContrasena()">¿Olvidaste tu contraseña?</button>
+    </div>
+
+    <div class="container" id="dashboard" style="display:none;">
+        <h2>Panel de Control</h2>
+        <p>Saldo actual: <span id="saldo">$0</span></p>
+        <div id="admin-controls" style="display:none;">
+            <button onclick="agregarIngreso()">Agregar Ingreso</button>
+            <button onclick="registrarEgreso()">Registrar Egreso</button>
+        </div>
+        <canvas id="balanceChart"></canvas>
+    </div>
+
+    <script>
+        let saldo = 0;
+        let folio = 1;
+        const admins = ["presidente", "tesorero", "secretario", "vocal1", "vocal2"];
+        let isAdmin = false;
+        const usuarios = { 
+            "presidente": "admin123", 
+            "tesorero": "admin456",
+            "secretario": "admin789",
+            "vocal1": "admin321",
+            "vocal2": "admin654" 
+        };
+        const donadores = {};
+        const mensajesMotivadores = [
+            "¡Gracias por tu apoyo! Juntos hacemos la diferencia!",
+            "Tu generosidad equipa a nuestros héroes voluntarios!",
+            "Cada peso cuenta para la seguridad de nuestra comunidad!",
+            "Un pequeño aporte, un gran impacto en la protección civil!"
+        ];
+
+        function login() {
+            let username = document.getElementById('username').value;
+            let password = document.getElementById('password').value;
+            
+            if (usuarios[username] && usuarios[username] === password) {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                
+                if (admins.includes(username)) {
+                    isAdmin = true;
+                    document.getElementById('admin-controls').style.display = 'block';
+                }
+            } else {
+                Swal.fire('Error', 'Usuario o contraseña incorrectos.', 'error');
+            }
+        }
+
+        function agregarIngreso() {
+            if (!isAdmin) {
+                Swal.fire('Acceso denegado', 'Solo administradores pueden agregar ingresos.', 'error');
+                return;
+            }
+            
+            let nombre = prompt("Ingrese el nombre del donador:");
+            if (!nombre) return;
+            
+            if (!donadores[nombre]) {
+                let telefono = prompt("Ingrese el número de teléfono:");
+                let poblacion = prompt("Ingrese la población:");
+                let montoDiario = parseFloat(prompt("Ingrese la cantidad de pesos por día:"));
+                if (isNaN(montoDiario) || montoDiario <= 0) return;
+                donadores[nombre] = { telefono, poblacion, saldo: 0, montoDiario };
+            }
+            
+            let monto = parseFloat(prompt("Ingrese el monto del ingreso:"));
+            if (!isNaN(monto) && monto > 0) {
+                donadores[nombre].saldo += monto;
+                saldo += monto;
+                actualizarSaldo();
+                generarRecibo(nombre, monto);
+            }
+        }
+
+        function actualizarSaldo() {
+            document.getElementById('saldo').innerText = `$${saldo}`;
+        }
+
+        function generarRecibo(nombre, monto) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setDrawColor(0, 51, 153); // Azul oscuro
+            doc.setLineWidth(1);
+            doc.rect(5, 5, 200, 90); // Marco azul
+            doc.setDrawColor(255, 165, 0); // Naranja
+            doc.rect(7, 7, 196, 86); // Marco interno naranja
+            
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(16);
+            doc.text("RECIBO DE DONACIÓN", 70, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Folio: $
